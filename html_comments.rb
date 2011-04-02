@@ -1,7 +1,7 @@
 #!/usr/bin/env jruby 
 
 #
-#
+# This method is to process the response and extract html comments
 #
 def $burp.process_html_comments(*param)
   url, rhost, rport, prefix, message = param
@@ -31,7 +31,8 @@ def $burp.process_html_comments(*param)
 end
 
 #
-#
+# This method essentially decides if the message is a request and
+# ...in scope, if so, it throws a call to process_html_comments.
 #
 def $burp.evt_proxy_message(*param)
   msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action = param
