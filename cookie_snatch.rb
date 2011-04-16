@@ -7,13 +7,7 @@
   
   def $burp.evt_proxy_message(*param)
   msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action = param
-   file = ('cookiez.txt')
-   prefix = nil
-   if is_https == true
-     prefix = 'https'
-   else
-     prefix = 'http'     
-   end
+    prefix = is_https ? "https://" : "http://"
    # Uncomment commented items below item to check if the URL you are requesting
    # ...is in scope. If so, only THEN will the cookie be logged.
    #rurl = "#{prefix}://#{rhost}:#{rport}"

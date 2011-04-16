@@ -37,7 +37,7 @@ end
 def $burp.evt_proxy_message(*param)
   msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action = param
     if is_req == false
-      prefix = is_req ? "https://" : "http://"
+      prefix = is_https ? "https://" : "http://"
       rurl = "#{prefix}#{rhost}"
        if (rurl) and $burp.isInScope(rurl)
          process_html_comments(url, rhost, rport, prefix, message)
