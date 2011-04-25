@@ -1,5 +1,12 @@
 #!/usr/bin/env jruby
 
+
+#
+# Not much to this script, just an example of taking a target site (MY_SITE) and choosing
+# ...to NOT intercept the requests for it. More or less an example script really.
+#
+
+
 MY_SITE = 'www.example.com'
 
 def $burp.evt_proxy_message(*param)
