@@ -14,7 +14,7 @@
    #rurl = "#{prefix}://#{rhost}:#{rport}"
    if is_req == false
     spmsg = message.split("\n\n")
-    short_msg = "#{spmsg}"
+    short_msg = "#{spmsg[0]}"
     mitem = short_msg.match(/^Set-Cookie:.+$/) 
     #  if $burp.in_scope?(rurl)  
         if !mitem.nil?
