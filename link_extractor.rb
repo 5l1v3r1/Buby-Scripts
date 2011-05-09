@@ -26,11 +26,7 @@
  #
  def $burp.evt_proxy_message(*param)
    msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action = param
-     if is_https == true
-       prefix = "https://"
-     else
-       prefix = "http://"
-     end
+   prefix = is_https ? "https://" : "http://"
    rurl = "#{prefix}#{rhost}"  
    if (rurl) and $burp.isInScope(rurl)
      $burp.get_site_map(rurl).each do |item|
