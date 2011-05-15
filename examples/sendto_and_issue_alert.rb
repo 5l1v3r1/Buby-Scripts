@@ -48,7 +48,7 @@ def extract_str(*objs)
        sendToIntruder(req.host, req.port, proto, req.request_string)
        sendToRepeater(req.host, req.port, proto, req.request_string, "#{fuzzp}")
        issueAlert("We've sent #{fuzzp} to intruder")
-       issueAlert("We've sent #{fuzzp} to repeater at")
+       issueAlert("We've sent #{fuzzp} to repeater")
      end
    end
 end
