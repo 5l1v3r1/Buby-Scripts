@@ -1,11 +1,6 @@
 # Example issueAlert, sendToIntruder, sendToRepeater, sendToSpider
 # This is an example script, in attempt to teach Buby
 
-#sendToRepeater(host, port, https, req, tab = nil)
-
-#sendToSpider(url)
-
-
 
 # This is just an array which contains params we want
 # to send over to intruder
