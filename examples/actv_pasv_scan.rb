@@ -15,8 +15,9 @@ def $burp.evt_proxy_message(*param)
   end
     
   if $burp.isInScope(uri)
-    if is_req == true   
-      $burp.do_active_scan(rhost, rport, pre_bool, message)
+    if is_req == true
+     # In latest 3.0 version of Buby I noticed a discrepancy with not adding a 5th argument (nil) to active scans
+      $burp.do_active_scan(rhost, rport, pre_bool, message, nil)
       req = message
     else
       $burp.do_passive_scan(rhost, rport, pre_bool, @@msg, message)
