@@ -119,45 +119,44 @@ class GzipFuFrame < JFrame
   
   def close_it
     jo = JOptionPane.showConfirmDialog(nil, 
-           "Exit confirmation will also close Burp!", 
+           "Close this window?", 
            "Confirmation", 
            javax.swing.JOptionPane::YES_NO_OPTION, 
            javax.swing.JOptionPane::QUESTION_MESSAGE)
     if jo == JOptionPane::YES_OPTION
-      java.lang.System.exit 0 
+      self.dispose()
     end
   end
   
 end
 
+def gzip?(gzip_str='')
+  e = nil
+  return false if gzip_str.nil? || gzip_str.empty?
+  begin
+     gz = Zlib::GzipReader.new(StringIO.new(gzip_str)) and gz.close
+   rescue Exception => e
+     puts e
+   end
+   result = e ? false : true
+   return result
+end
 
 def $burp.evt_proxy_message(*param)
     msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action = param
- @str = ''
- @e = nil  
-  if not is_req 
-    msg = message.split(/\r\n\r\n/)
-    body = msg[1]
-    begin
+    @str = ''
+    @e = nil  
+      msg = message.split(/\r\n\r\n/)
+      body = msg[1]
+      return super(*param) unless gzip?(body)
       if not body.nil?
         gz = Zlib::GzipReader.new(StringIO.new(body))
-        msg[1] = gz.read
+        body = gz.read
         gz.close
         @str << "#{msg[0]}".gsub!(/Content-Encoding: gzip/, "")
-        @str << "\r\n\r\n#{msg[1]}"
+        @str << "\r\n\r\n#{body}"
       end     
-    rescue Exception => @e
-    end 
-      if @e
-        param = msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action
-       return super(*param)
-      else
-         param = msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, @str, action
-         return super(*param)
-      end 
-   else
-     return super(*param)
-  end   
+      return super( msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, @str, action)   
 end
 
-GzipFuFrame.new
+#GzipFuFrame.new
