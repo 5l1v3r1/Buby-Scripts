@@ -73,20 +73,38 @@ class GzipFuPanel < JPanel
     
   end
   
-
+  def send_to_panel(str='')
+    @ta1.text = '' && @ta1.text = str
+  end
+  
 end 
 
 class GzipFuTabbedPane < JTabbedPane
   
+  attr_accessor :gfps
+  
   def initialize(frame)
     super(JTabbedPane::TOP, JTabbedPane::SCROLL_TAB_LAYOUT)
-    @gfp = GzipFuPanel.new(frame)
-    add("Test1", @gfp)
+    @frame = frame
+    self.gfps = []
+  end 
+  
+  def add_panel
+    gfp = GzipFuPanel.new(@frame)
+    self.gfps.push(gfp)
+    add("#{self.gfps.length}", gfp)
+  end 
+  
+  def send_to_gui(str='')
+    add_panel
+    self.gfps.last.send_to_panel(str)
   end 
   
 end 
 
 class GzipFuFrame < JFrame
+  
+  attr_accessor :gftp
   
   def initialize
     super("GZip-F.U.")
@@ -104,8 +122,8 @@ class GzipFuFrame < JFrame
       end
      end
      
-    gftp = GzipFuTabbedPane.new(self)
-    self.add gftp
+    self.gftp = GzipFuTabbedPane.new(self)
+    self.add self.gftp
     
     # Set the overall side of the frame
     self.setJMenuBar menuBar
@@ -128,7 +146,13 @@ class GzipFuFrame < JFrame
     end
   end
   
+  def send_to_gui(str='')
+    self.gftp.send_to_gui(str)
+  end
+  
 end
+
+$gzf = GzipFuFrame.new
 
 def gzip?(gzip_str='')
   e = nil
@@ -155,8 +179,7 @@ def $burp.evt_proxy_message(*param)
         msg[0].gsub!(/\r\nContent-Encoding: gzip\r\nContent-Length: (.*)/, "") if not msg[0].nil?
         @str << msg[0]
         @str << "\r\n\r\n#{body}"
-      end     
-      return super( msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, @str, action)   
+      end
+      $gzf.send_to_gui(@str) if is_req   
+      return super( msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action)   
 end
-
-#GzipFuFrame.new
