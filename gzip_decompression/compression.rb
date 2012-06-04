@@ -148,16 +148,12 @@ def $burp.evt_proxy_message(*param)
       msg = message.split(/\r\n\r\n/)
       body = msg[1]
       return super(*param) unless gzip?(body)
-      puts message.inspect
       if not body.nil?
         gz = Zlib::GzipReader.new(StringIO.new(body))
         body = gz.read
         gz.close
-        puts msg[0].inspect
         msg[0].gsub!(/\r\nContent-Encoding: gzip\r\nContent-Length: (.*)/, "") if not msg[0].nil?
         @str << msg[0]
-        puts "=" * 15
-        puts msg[0].inspect
         @str << "\r\n\r\n#{body}"
       end     
       return super( msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, @str, action)   
