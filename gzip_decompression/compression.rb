@@ -17,7 +17,8 @@ import javax.swing.JScrollPane
 
 class GzipFuPanel < JPanel
   
-  def initialize(frame)
+  def initialize(frame, is_response=nil)
+    @is_response = is_response
     @frame = frame
     super()
     initUI
@@ -31,7 +32,9 @@ class GzipFuPanel < JPanel
     end
     
     @send_b = JButton.new("Forward")
+    @send_b.enabled = false if @is_response
     @ta1 = JTextArea.new
+    @ta1.editable = false if @is_response
     @sp1 = JScrollPane.new(@ta1)
    
     #
@@ -79,6 +82,27 @@ class GzipFuPanel < JPanel
   
 end 
 
+
+class GzipFuSubTabbedPane < JTabbedPane
+  
+  def initialize(frame)
+   super(JTabbedPane::TOP, JTabbedPane::SCROLL_TAB_LAYOUT) 
+   @t1 = GzipFuPanel.new(frame)
+   @t2 = GzipFuPanel.new(frame, true)
+   add("request", @t1 )
+   add("response", @t2)
+  end 
+  
+  def set_request_text(str='')
+    @t1.send_to_panel(str)
+  end 
+  
+  def set_response_text(str='')
+    @t2.send_to_panel(str)
+  end 
+    
+end
+
 class GzipFuTabbedPane < JTabbedPane
   
   attr_accessor :gfps
@@ -87,20 +111,25 @@ class GzipFuTabbedPane < JTabbedPane
     super(JTabbedPane::TOP, JTabbedPane::SCROLL_TAB_LAYOUT)
     @frame = frame
     self.gfps = []
+    add_panel
   end 
   
   def add_panel
-    gfp = GzipFuPanel.new(@frame)
+    gfp = GzipFuSubTabbedPane.new(@frame)
     self.gfps.push(gfp)
     add("#{self.gfps.length}", gfp)
   end 
   
-  def send_to_gui(str='')
-    add_panel
-    self.gfps.last.send_to_panel(str)
+  def send_to_request(str='')
+    self.gfps.last.set_request_text(str)
   end 
   
+  def send_to_response(str='')
+    self.gfps.last.set_response_text(str)
+  end
+  
 end 
+
 
 class GzipFuFrame < JFrame
   
@@ -124,7 +153,7 @@ class GzipFuFrame < JFrame
      
     self.gftp = GzipFuTabbedPane.new(self)
     self.add self.gftp
-    
+
     # Set the overall side of the frame
     self.setJMenuBar menuBar
     self.setPreferredSize Dimension.new(1300, 900)
@@ -146,13 +175,19 @@ class GzipFuFrame < JFrame
     end
   end
   
-  def send_to_gui(str='')
-    self.gftp.send_to_gui(str)
+  def send_to_request(str='')
+    self.gftp.send_to_request(str)
+  end 
+  
+  def send_to_response(str='')
+     self.gftp.send_to_response(str)
   end
   
 end
 
 $gzf = GzipFuFrame.new
+$gzf.send_to_request("I\'m a request")
+$gzf.send_to_response("I\'m a response")
 
 def gzip?(gzip_str='')
   e = nil
