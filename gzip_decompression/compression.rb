@@ -26,13 +26,20 @@ class GzipFuPanel < JPanel
   
   def initUI
     
+    # Add Close Button
     @close_b = JButton.new("Exit")
     @close_b.add_action_listener do |e|
       @frame.close_it     
     end
     
+    # Add Forward Button, disabled if a response, just wouldn't make much sense
     @send_b = JButton.new("Forward")
     @send_b.enabled = false if @is_response
+    @send_b.add_action_listener do |e|
+      @frame.close_it     
+    end
+    
+    # Gotta have some text area, if it is a response, you won't be able to edit
     @ta1 = JTextArea.new
     @ta1.editable = false if @is_response
     @sp1 = JScrollPane.new(@ta1)
@@ -111,7 +118,6 @@ class GzipFuTabbedPane < JTabbedPane
     super(JTabbedPane::TOP, JTabbedPane::SCROLL_TAB_LAYOUT)
     @frame = frame
     self.gfps = []
-    add_panel
   end 
   
   def add_panel
@@ -142,6 +148,9 @@ class GzipFuFrame < JFrame
   
   def init
     
+    self.gftp = GzipFuTabbedPane.new(self)
+    self.add self.gftp
+    
     self.addWindowListener do |e|
       if e.kind_of?(WindowEvent)
        ps = e.paramString.split(',')[0] == "WINDOW_CLOSING" ? true : false
@@ -151,8 +160,6 @@ class GzipFuFrame < JFrame
       end
      end
      
-    self.gftp = GzipFuTabbedPane.new(self)
-    self.add self.gftp
 
     # Set the overall side of the frame
     self.setJMenuBar menuBar
@@ -172,8 +179,13 @@ class GzipFuFrame < JFrame
            javax.swing.JOptionPane::QUESTION_MESSAGE)
     if jo == JOptionPane::YES_OPTION
       self.dispose()
+      #java.lang.System.exit 0
     end
   end
+  
+  def add_panel
+    self.gftp.add_panel
+  end 
   
   def send_to_request(str='')
     self.gftp.send_to_request(str)
@@ -186,8 +198,7 @@ class GzipFuFrame < JFrame
 end
 
 $gzf = GzipFuFrame.new
-$gzf.send_to_request("I\'m a request")
-$gzf.send_to_response("I\'m a response")
+
 
 def gzip?(gzip_str='')
   e = nil
@@ -207,14 +218,28 @@ def $burp.evt_proxy_message(*param)
       msg = message.split(/\r\n\r\n/)
       body = msg[1]
       return super(*param) unless gzip?(body)
-      if not body.nil?
+      if is_req and not body.nil?
         gz = Zlib::GzipReader.new(StringIO.new(body))
         body = gz.read
         gz.close
-        msg[0].gsub!(/\r\nContent-Encoding: gzip\r\nContent-Length: (.*)/, "") if not msg[0].nil?
+        # This below code doesn't really matter if we are recompressing later :p
+        # msg[0].gsub!(/\r\nContent-Encoding: gzip\r\nContent-Length: (.*)/, "") if not msg[0].nil?
         @str << msg[0]
         @str << "\r\n\r\n#{body}"
+        $gzf.add_panel
+        $gzf.send_to_request(@str)
       end
-      $gzf.send_to_gui(@str) if is_req   
+            
       return super( msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action)   
 end
+
+=begin
+  # Use this code for testing the frame, like a shitty Unit Test :-)
+  $gzf = GzipFuFrame.new
+  $gzf.add_panel
+  $gzf.send_to_request("I\'m a request")
+  $gzf.send_to_response("I\'m a response")
+  $gzf.add_panel
+  $gzf.send_to_request("hello")
+  $gzf.send_to_response("world")
+=end
