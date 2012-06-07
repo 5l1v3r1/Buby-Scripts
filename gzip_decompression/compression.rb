@@ -17,14 +17,44 @@ import javax.swing.JScrollPane
 
 class GzipFuPanel < JPanel
   
-  def initialize(frame, is_response=nil)
+  def initialize(frame, main, opts, is_response=nil)
+    opts = opts || {}
+    @host = opts['host']
+    @port = opts['port']
+    @pre =  opts['pre']
+    @main = main
     @is_response = is_response
     @frame = frame
     super()
     initUI
   end
   
+  def make_http_request(message='fail')
+    return message if message == 'fail'
+    res = $burp.makeHttpRequest(@host, @port, @pre, message)
+    return res
+  end
+  
+  def check_response(response='')
+    return response if response.empty?
+    msg = response.split(/\r\n\r\n/)
+    body = msg[1]
+    return response if body.nil?
+    if GzipHandler.gzip?(body)
+       return GzipHandler.unpack(response)
+     else
+       return response
+     end 
+  end 
+  
   def initUI
+    
+    
+    # Gotta have some text area, if it is a response, you won't be able to edit
+    @ta1 = JTextArea.new
+    @ta1.editable = false if @is_response
+    @sp1 = JScrollPane.new(@ta1)
+
     
     # Add Close Button
     @close_b = JButton.new("Exit")
@@ -36,13 +66,11 @@ class GzipFuPanel < JPanel
     @send_b = JButton.new("Forward")
     @send_b.enabled = false if @is_response
     @send_b.add_action_listener do |e|
-      @frame.close_it     
+      packed_msg = GzipHandler.pack(@ta1.text)
+      response = make_http_request(packed_msg)
+      res = check_response(response)
+      @main.set_response_text(res)
     end
-    
-    # Gotta have some text area, if it is a response, you won't be able to edit
-    @ta1 = JTextArea.new
-    @ta1.editable = false if @is_response
-    @sp1 = JScrollPane.new(@ta1)
    
     #
     # GROUP LAYOUT OPTIONS
@@ -92,10 +120,10 @@ end
 
 class GzipFuSubTabbedPane < JTabbedPane
   
-  def initialize(frame)
+  def initialize(frame, opts)
    super(JTabbedPane::TOP, JTabbedPane::SCROLL_TAB_LAYOUT) 
-   @t1 = GzipFuPanel.new(frame)
-   @t2 = GzipFuPanel.new(frame, true)
+   @t1 = GzipFuPanel.new(frame, self, opts )
+   @t2 = GzipFuPanel.new(frame, self, opts, true)
    add("request", @t1 )
    add("response", @t2)
   end 
@@ -120,10 +148,10 @@ class GzipFuTabbedPane < JTabbedPane
     self.gfps = []
   end 
   
-  def add_panel
-    gfp = GzipFuSubTabbedPane.new(@frame)
+  def add_panel(mid, opts)
+    gfp = GzipFuSubTabbedPane.new(@frame, opts)
     self.gfps.push(gfp)
-    add("#{self.gfps.length}", gfp)
+    add("#{mid}", gfp)
   end 
   
   def send_to_request(str='')
@@ -183,8 +211,8 @@ class GzipFuFrame < JFrame
     end
   end
   
-  def add_panel
-    self.gftp.add_panel
+  def add_panel(mid, opts)
+    self.gftp.add_panel(mid, opts) if mid
   end 
   
   def send_to_request(str='')
@@ -199,35 +227,100 @@ end
 
 $gzf = GzipFuFrame.new
 
+# Module built to handle all things gzip related
+module GzipHandler
 
-def gzip?(gzip_str='')
-  e = nil
-  return false if gzip_str.nil? || gzip_str.empty?
-  begin
-     gz = Zlib::GzipReader.new(StringIO.new(gzip_str)) and gz.close
-   rescue Exception => e
+# Let's hope this works! Supposed to pack a full request like a boss
+  def self.pack(message='')
+    return message if message.empty?
+    msg = message.split(/\r\n\r\n/)
+    body = msg[1]
+    return message if self.gzip?(body)
+    str = ''
+    body_str = ''
+    str << msg[0]
+    if not body.nil? 
+      gz = Zlib::GzipWriter.new(StringIO.new(body_str))
+      gz.write message
+      gz.close
+      str << "\r\n\r\n#{body_str}"
+    else
+      str << "\r\n\r\n#{body}"
+    end
+   return str
+  end 
+  
+  # workaround because I'm tired and can't figure out what the deal is. Following JSIO practices tonight/morning.
+  def self.workaround_unpack(message='')
+      return message if message.empty?
+         str = ''
+         msg = message.split(/\r\n\r\n/)
+         body = msg[1]
+         return messasge if body.nil?
+           gz = Zlib::GzipReader.new(StringIO.new(body))
+           body = gz.read
+           gz.close
+           str << "#{body}"
+       return str 
    end
-   result = e ? false : true
-   return result
+  
+  def self.unpack(message='')
+     return message if message.empty?
+        str = ''
+        msg = message.split(/\r\n\r\n/)
+        body = msg[1]
+        return messasge if body.nil?
+          gz = Zlib::GzipReader.new(StringIO.new(body))
+          body = gz.read
+          gz.close
+          str << msg[0]
+          str << "\r\n\r\n#{body}"
+      return str 
+  end 
+
+  def self.gzip?(gzip_str='')
+    e = nil
+    return false if gzip_str.nil? || gzip_str.empty?
+    begin
+      gz = Zlib::GzipReader.new(StringIO.new(gzip_str)) and gz.close
+    rescue Exception => e
+    end
+    result = e ? false : true
+    return result
+  end
 end
 
 def $burp.evt_proxy_message(*param)
     msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action = param
-    @str = ''
-    @e = nil  
+
+=begin
+     #test code    
+     if is_req && http_meth == "POST"
+       opts = {}
+       opts['host'] = rhost
+       opts['port'] = rport
+       opts['pre'] = is_https
+       #msg = pack(message)
+       msg = message
+       $gzf.add_panel(msg_ref + 1, opts)
+       $gzf.send_to_request(msg)
+    end
+=end  
       msg = message.split(/\r\n\r\n/)
       body = msg[1]
-      return super(*param) unless gzip?(body)
-      if is_req and not body.nil?
-        gz = Zlib::GzipReader.new(StringIO.new(body))
-        body = gz.read
-        gz.close
+      return super(*param) unless GzipHandler.gzip?(body)
+      if is_req and http_meth == "POST"
+      # The line below is for responses, was testing
+      #if not is_req
+        opts = {}
+        opts['host'] = rhost
+        opts['port'] = rport
+        opts['pre'] = is_https
         # This below code doesn't really matter if we are recompressing later :p
         # msg[0].gsub!(/\r\nContent-Encoding: gzip\r\nContent-Length: (.*)/, "") if not msg[0].nil?
-        @str << msg[0]
-        @str << "\r\n\r\n#{body}"
-        $gzf.add_panel
-        $gzf.send_to_request(@str)
+        msg = GzipHandler.unpack(message)
+        $gzf.add_panel(msg_ref + 1, opts)
+        $gzf.send_to_request(msg)
       end
             
       return super( msg_ref, is_req, rhost, rport, is_https, http_meth, url, resourceType, status, req_content_type, message, action)   
